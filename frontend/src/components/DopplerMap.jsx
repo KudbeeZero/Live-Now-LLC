@@ -24,6 +24,9 @@ const STATUS_STYLE = {
   Unknown: { color: '#D97706', fillColor: '#FCD34D', label: 'Unknown' },
 };
 
+// Brightside Recovery royal blue
+const BS_BLUE = '#003087';
+
 // ZIP code → approximate center coordinates for NE Ohio demo ZIPs.
 // Used to show the Proof of Presence pulse marker when a handoff is verified.
 const ZIP_COORDS = {
@@ -105,15 +108,77 @@ function PulseMarker({ position, zipCode }) {
 }
 
 /**
+ * AnchorMarker
+ *
+ * Renders a Brightside "Verified Anchor" pin using a royal blue teardrop divIcon.
+ * Rendered above all regular provider pins (zIndexOffset: 2000).
+ * Popup shows clinic name, address, phone, services, and Suboxone price snippet.
+ */
+function AnchorMarker({ location }) {
+  const map = useMap();
+  const markerRef = useRef(null);
+
+  useEffect(() => {
+    const icon = L.divIcon({
+      className: '',
+      html: `
+        <div style="position:relative;width:34px;height:40px;">
+          <div style="
+            width:34px;height:34px;
+            background:${BS_BLUE};
+            border-radius:50% 50% 50% 0;
+            transform:rotate(-45deg);
+            border:2.5px solid #fff;
+            box-shadow:0 3px 8px rgba(0,0,40,0.45);
+          "></div>
+          <span style="
+            position:absolute;top:4px;left:0;right:6px;
+            display:flex;align-items:center;justify-content:center;
+            color:#fff;font-size:11px;font-weight:900;
+            font-family:system-ui,sans-serif;letter-spacing:-0.5px;
+          ">BS</span>
+        </div>
+      `,
+      iconSize:   [34, 40],
+      iconAnchor: [17, 40],
+    });
+
+    const services = location.services ? location.services.join(' · ') : '';
+    const marker = L.marker([location.lat, location.lng], { icon, zIndexOffset: 2000 });
+    marker.bindPopup(`
+      <div style="font-family:system-ui,sans-serif;min-width:180px;">
+        <div style="background:${BS_BLUE};color:#fff;padding:7px 10px;margin:-12px -12px 8px;font-size:11px;font-weight:700;border-radius:4px 4px 0 0;">
+          ★ BRIGHTSIDE ANCHOR
+        </div>
+        <p style="font-size:12px;font-weight:700;margin:0 0 3px;color:#111;">${location.name}</p>
+        <p style="font-size:11px;color:#555;margin:0 0 3px;">${location.address ?? ''}</p>
+        <p style="font-size:11px;color:${BS_BLUE};font-weight:600;margin:0 0 3px;">${location.phone ?? ''}</p>
+        ${services ? `<p style="font-size:10px;color:#666;margin:0 0 5px;">${services}</p>` : ''}
+        <p style="font-size:10px;color:#16a34a;font-weight:700;margin:0;">
+          ✓ Medicaid &nbsp;|&nbsp; Suboxone <strong>$45.37</strong>/mo via Cost Plus
+        </p>
+      </div>
+    `);
+    marker.addTo(map);
+    markerRef.current = marker;
+    return () => { marker.remove(); };
+  }, [map, location]);
+
+  return null;
+}
+
+/**
  * DopplerMap
  *
  * Props:
- *   providers   — array of ProviderView objects from the backend (or mock data)
+ *   providers       — array of ProviderView objects from the backend (or mock data)
  *     { id, name, lat, lng, status: 'Live' | 'Offline' | 'Unknown' }
- *   pulsingZips — Set<string> of ZIP codes that have had a handoff verified
- *                 recently (shows animated PoP pulse markers)
+ *   anchorProviders — array of Brightside locations { id, name, lat, lng, address, phone, services }
+ *                     rendered as royal-blue teardrop pins with highest z-index
+ *   pulsingZips     — Set<string> of ZIP codes with a recently verified handoff
+ *                     (shows animated PoP pulse markers)
  */
-export function DopplerMap({ providers = [], pulsingZips = new Set() }) {
+export function DopplerMap({ providers = [], anchorProviders = [], pulsingZips = new Set() }) {
   // Build list of ZIP coords to pulse, filtering to only known ZIPs
   const pulseMarkers = [...pulsingZips]
     .filter((zip) => ZIP_COORDS[zip])
@@ -174,6 +239,11 @@ export function DopplerMap({ providers = [], pulsingZips = new Set() }) {
             );
           })}
 
+          {/* Brightside "Verified Anchor" pins — highest z-index, rendered last */}
+          {anchorProviders.map((loc) => (
+            <AnchorMarker key={loc.id} location={loc} />
+          ))}
+
           {/* Proof of Presence pulse markers for recently verified handoff ZIPs */}
           {pulseMarkers.map(({ zip, coords }) => (
             <PulseMarker key={zip} position={coords} zipCode={zip} />
@@ -200,6 +270,13 @@ export function DopplerMap({ providers = [], pulsingZips = new Set() }) {
               style={{ background: '#00A896', opacity: 0.7 }}
             />
             Handoff Verified (PoP)
+          </span>
+          <span className="flex items-center gap-1">
+            <span
+              className="inline-block w-3 h-3 rounded-sm rotate-45"
+              style={{ background: '#003087' }}
+            />
+            Brightside Anchor
           </span>
         </div>
       </div>

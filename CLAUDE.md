@@ -53,6 +53,35 @@ Any provider `isLive` status with a `lastVerified` timestamp **older than 14,400
 
 ---
 
+## BRIGHTSIDE RECOVERY — VERIFIED ANCHOR PROVIDER
+
+Brightside Recovery is the **primary physical partner** for Ohio Region 13.
+They offer Full-Continuum care (Detox, IOP, MAT) across 17 Northeast Ohio locations.
+
+### Priority Rules
+- **Search Priority:** For any query containing "Suboxone", "MAT", "Buprenorphine",
+  "IOP", "Detox", or "medication-assisted treatment", Brightside Recovery locations
+  **must appear first** in results, before generic/unverified providers.
+- **Anchor Designation:** Brightside locations display with Royal Blue (`#003087`)
+  teardrop markers on the map with `zIndexOffset: 2000` (above all other pins).
+- **Verification Badge:** Brightside cards show "Verified by Brightside" (blue) when
+  `lastVerified < 4 hours`; badge turns yellow ("Verify Pending") when stale (§2 Decay Law).
+- **Medicaid:** All 17 Brightside locations `acceptsMedicaid: true`.
+
+### Suboxone Cost Plus Bridge (Mandatory)
+- Every Brightside location card must display the inline price snippet:
+  Retail `$185.00` → Cost Plus `$45.37` (save `$139.63/month`).
+- The "Request Script for Cost Plus" button pre-fills the MCCPD NCPDP ID `5755167`.
+- Drug: Buprenorphine/Naloxone 8mg/2mg Film (Generic Suboxone), 60 films / 30-day supply.
+
+### Warm Handoff (PoP) Integration
+- Each Brightside location card embeds an inline PoP QR generator (pre-filled ZIP).
+- When a volunteer drops a user at any Brightside location, the generated QR is scanned
+  by clinic staff via the global `ScanHandoff` component — this pulses the correct ZIP
+  on the Admin Heatmap, fulfilling the Proof of Presence mandate (§4).
+
+---
+
 ## ARCHITECTURE INVARIANTS
 
 | Layer     | Technology              | Notes                                  |

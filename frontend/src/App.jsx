@@ -6,6 +6,7 @@ import { DopplerMap }         from './components/DopplerMap.jsx';
 import { VolunteerHandoff }   from './components/VolunteerHandoff.jsx';
 import { ScanHandoff }        from './components/ScanHandoff.jsx';
 import { HandoffImpact }      from './components/HandoffImpact.jsx';
+import { BrightsideAnchor, BRIGHTSIDE_LOCATIONS } from './components/providers/BrightsideAnchor.jsx';
 
 /**
  * Mock provider data — mirrors the seed data in backend/main.mo.
@@ -114,7 +115,11 @@ export default function App() {
           <h2 id="map-heading" className="text-navy font-bold text-xl mb-3">
             Northeast Ohio Provider Map
           </h2>
-          <DopplerMap providers={providers} pulsingZips={pulsingZips} />
+          <DopplerMap
+            providers={providers}
+            anchorProviders={BRIGHTSIDE_LOCATIONS}
+            pulsingZips={pulsingZips}
+          />
         </section>
 
         {/* Proof of Presence — primary impact metric */}
@@ -137,6 +142,9 @@ export default function App() {
             />
           </div>
         </section>
+
+        {/* Brightside Recovery — Verified Anchor Provider matrix */}
+        <BrightsideAnchor />
 
         {/* Providers list + Price Comparison side-by-side on larger screens */}
         <div className="flex flex-col lg:flex-row gap-6">
