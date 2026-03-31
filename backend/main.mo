@@ -120,13 +120,34 @@ actor LiveNowBackend {
   // ── Seed Data (Northeast Ohio — fictional clinic names, real-ish coords) ──────
 
   let seedProviders : [Provider] = [
-    { id = "p1"; name = "Cleveland Recovery Alliance";   lat = 41.4993; lng = -81.6944; isLive = true;  lastVerified = Time.now() },
-    { id = "p2"; name = "Lakewood MAT Center";           lat = 41.4820; lng = -81.7982; isLive = true;  lastVerified = Time.now() },
-    { id = "p3"; name = "Akron Hope Clinic";             lat = 41.0814; lng = -81.5190; isLive = false; lastVerified = Time.now() },
-    { id = "p4"; name = "Parma Treatment Services";      lat = 41.3845; lng = -81.7229; isLive = true;  lastVerified = Time.now() },
-    { id = "p5"; name = "Euclid Recovery House";         lat = 41.5931; lng = -81.5268; isLive = false; lastVerified = Time.now() },
-    { id = "p6"; name = "Lorain County MAT Partners";   lat = 41.4529; lng = -82.1824; isLive = true;  lastVerified = Time.now() },
-    { id = "p7"; name = "Medina Wellness Network";       lat = 41.1381; lng = -81.8637; isLive = false; lastVerified = Time.now() },
+    // ── General network providers ────────────────────────────────────────────
+    { id = "p1"; name = "Cleveland Recovery Alliance";  lat = 41.4993; lng = -81.6944; isLive = true;  lastVerified = Time.now() },
+    { id = "p2"; name = "Lakewood MAT Center";          lat = 41.4820; lng = -81.7982; isLive = true;  lastVerified = Time.now() },
+    { id = "p3"; name = "Akron Hope Clinic";            lat = 41.0814; lng = -81.5190; isLive = false; lastVerified = Time.now() },
+    { id = "p4"; name = "Parma Treatment Services";     lat = 41.3845; lng = -81.7229; isLive = true;  lastVerified = Time.now() },
+    { id = "p5"; name = "Euclid Recovery House";        lat = 41.5931; lng = -81.5268; isLive = false; lastVerified = Time.now() },
+    { id = "p6"; name = "Lorain County MAT Partners";  lat = 41.4529; lng = -82.1824; isLive = true;  lastVerified = Time.now() },
+    { id = "p7"; name = "Medina Wellness Network";      lat = 41.1381; lng = -81.8637; isLive = false; lastVerified = Time.now() },
+    // ── Brightside Recovery — Verified Anchor Provider (17 locations) ────────
+    // PRIORITY: Return first for Suboxone / MAT / IOP / Detox queries.
+    // All locations accept Medicaid. No PHI stored — clinic-level data only.
+    { id = "bs-001"; name = "Brightside Recovery – Cleveland West";        lat = 41.4762; lng = -81.7230; isLive = true; lastVerified = Time.now() },
+    { id = "bs-002"; name = "Brightside Recovery – Lakewood";              lat = 41.4820; lng = -81.7982; isLive = true; lastVerified = Time.now() },
+    { id = "bs-003"; name = "Brightside Recovery – Parma";                 lat = 41.3845; lng = -81.7229; isLive = true; lastVerified = Time.now() },
+    { id = "bs-004"; name = "Brightside Recovery – Strongsville";          lat = 41.3145; lng = -81.8357; isLive = true; lastVerified = Time.now() },
+    { id = "bs-005"; name = "Brightside Recovery – Broadview Heights";     lat = 41.3200; lng = -81.6790; isLive = true; lastVerified = Time.now() },
+    { id = "bs-006"; name = "Brightside Recovery – Akron Main";            lat = 41.0814; lng = -81.5190; isLive = true; lastVerified = Time.now() },
+    { id = "bs-007"; name = "Brightside Recovery – Akron North Hill";      lat = 41.1034; lng = -81.5100; isLive = true; lastVerified = Time.now() },
+    { id = "bs-008"; name = "Brightside Recovery – Cuyahoga Falls";        lat = 41.1334; lng = -81.4845; isLive = true; lastVerified = Time.now() },
+    { id = "bs-009"; name = "Brightside Recovery – Kent";                  lat = 41.1531; lng = -81.3579; isLive = true; lastVerified = Time.now() },
+    { id = "bs-010"; name = "Brightside Recovery – Lorain";                lat = 41.4529; lng = -82.1824; isLive = true; lastVerified = Time.now() },
+    { id = "bs-011"; name = "Brightside Recovery – Elyria";                lat = 41.3684; lng = -82.1074; isLive = true; lastVerified = Time.now() },
+    { id = "bs-012"; name = "Brightside Recovery – Mentor";                lat = 41.6731; lng = -81.3498; isLive = true; lastVerified = Time.now() },
+    { id = "bs-013"; name = "Brightside Recovery – Willoughby";            lat = 41.6403; lng = -81.4118; isLive = true; lastVerified = Time.now() },
+    { id = "bs-014"; name = "Brightside Recovery – Eastlake";              lat = 41.6550; lng = -81.4499; isLive = true; lastVerified = Time.now() },
+    { id = "bs-015"; name = "Brightside Recovery – Medina";                lat = 41.1381; lng = -81.8637; isLive = true; lastVerified = Time.now() },
+    { id = "bs-016"; name = "Brightside Recovery – Canton";                lat = 40.8450; lng = -81.4400; isLive = true; lastVerified = Time.now() },
+    { id = "bs-017"; name = "Brightside Recovery – Massillon";             lat = 40.7967; lng = -81.5213; isLive = true; lastVerified = Time.now() },
   ];
 
   if (providers.size() == 0) {

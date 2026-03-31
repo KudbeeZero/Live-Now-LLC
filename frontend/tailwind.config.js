@@ -13,6 +13,10 @@ export default {
         // Emergency red
         'emergency':     '#C0392B',
         'emergency-dk':  '#96281B',
+        // Brightside Recovery — Verified Anchor Provider
+        'brightside':    '#003087',
+        'brightside-dk': '#002060',
+        'brightside-lt': '#E8EEF8',
       },
       minHeight: {
         'touch': '44px',
