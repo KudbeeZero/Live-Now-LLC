@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useEmergencyMode } from './hooks/useEmergencyMode.js';
-import { EmergencyBanner } from './components/EmergencyBanner.jsx';
+import { EmergencyBanner }   from './components/EmergencyBanner.jsx';
 import { PriceComparisonCard } from './components/PriceComparisonCard.jsx';
-import { DopplerMap } from './components/DopplerMap.jsx';
+import { DopplerMap }         from './components/DopplerMap.jsx';
+import { VolunteerHandoff }   from './components/VolunteerHandoff.jsx';
+import { ScanHandoff }        from './components/ScanHandoff.jsx';
+import { HandoffImpact }      from './components/HandoffImpact.jsx';
 
 /**
  * Mock provider data — mirrors the seed data in backend/main.mo.
@@ -24,17 +27,51 @@ const MOCK_PROVIDERS = [
   { id: 'p7', name: 'Medina Wellness Network',       lat: 41.1381, lng: -81.8637, status: 'Unknown' },
 ];
 
-export default function App() {
-  const emergency  = useEmergencyMode();
-  const [providers, setProviders] = useState(MOCK_PROVIDERS);
+// Mock ZIP count data for demo — replace with canister getHandoffCountsByZip()
+const MOCK_ZIP_COUNTS = [];
 
-  // TODO: replace mock with canister call:
+// How long (ms) a ZIP stays in "pulsing" state after a fresh handoff
+const PULSE_DURATION_MS = 30_000;
+
+export default function App() {
+  const emergency = useEmergencyMode();
+  const [providers]    = useState(MOCK_PROVIDERS);
+  const [zipCounts, setZipCounts] = useState(MOCK_ZIP_COUNTS);
+  const [pulsingZips, setPulsingZips] = useState(new Set());
+
+  // TODO: replace mocks with canister calls once dfx is deployed:
   // useEffect(() => {
   //   liveNowBackend.getAllProviders().then(setProviders);
+  //   liveNowBackend.getHandoffCountsByZip().then(setZipCounts);
   // }, []);
 
   const liveCount    = providers.filter((p) => p.status === 'Live').length;
   const offlineCount = providers.filter((p) => p.status !== 'Live').length;
+  const totalHandoffs = zipCounts.reduce((sum, { count }) => sum + count, 0);
+
+  // Called by ScanHandoff when a handoff is successfully verified
+  const handleHandoffVerified = useCallback((zipCode) => {
+    // Update ZIP counts
+    setZipCounts((prev) => {
+      const existing = prev.find((z) => z.zipCode === zipCode);
+      if (existing) {
+        return prev.map((z) =>
+          z.zipCode === zipCode ? { ...z, count: z.count + 1 } : z
+        );
+      }
+      return [...prev, { zipCode, count: 1 }];
+    });
+
+    // Add to pulsing set, then remove after PULSE_DURATION_MS
+    setPulsingZips((prev) => new Set([...prev, zipCode]));
+    setTimeout(() => {
+      setPulsingZips((prev) => {
+        const next = new Set(prev);
+        next.delete(zipCode);
+        return next;
+      });
+    }, PULSE_DURATION_MS);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -53,13 +90,18 @@ export default function App() {
               Ohio Region 13 — Anonymous MAT Provider Availability
             </p>
           </div>
-          <div className="flex gap-4 text-sm font-semibold">
+          <div className="flex gap-3 text-sm font-semibold flex-wrap">
             <span className="bg-cplus-teal rounded-lg px-3 py-1 text-white">
               {liveCount} Live
             </span>
             <span className="bg-gray-600 rounded-lg px-3 py-1 text-white">
               {offlineCount} Offline / Unknown
             </span>
+            {totalHandoffs > 0 && (
+              <span className="bg-emerald-600 rounded-lg px-3 py-1 text-white">
+                {totalHandoffs} Handoffs Verified
+              </span>
+            )}
           </div>
         </div>
       </header>
@@ -72,7 +114,28 @@ export default function App() {
           <h2 id="map-heading" className="text-navy font-bold text-xl mb-3">
             Northeast Ohio Provider Map
           </h2>
-          <DopplerMap providers={providers} />
+          <DopplerMap providers={providers} pulsingZips={pulsingZips} />
+        </section>
+
+        {/* Proof of Presence — primary impact metric */}
+        <section aria-labelledby="pop-heading">
+          <h2 id="pop-heading" className="text-navy font-bold text-xl mb-1">
+            Proof of Presence
+          </h2>
+          <p className="text-gray-500 text-sm mb-4">
+            Record a verified Warm Handoff. A volunteer generates a one-time QR code;
+            clinic staff scan it to confirm the bridge. Each scan is recorded anonymously
+            on the Internet Computer.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <VolunteerHandoff />
+            <ScanHandoff onVerified={handleHandoffVerified} />
+            <HandoffImpact
+              total={totalHandoffs}
+              zipCounts={zipCounts}
+              pulsingZips={pulsingZips}
+            />
+          </div>
         </section>
 
         {/* Providers list + Price Comparison side-by-side on larger screens */}

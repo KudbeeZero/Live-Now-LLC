@@ -35,6 +35,22 @@ Any provider `isLive` status with a `lastVerified` timestamp **older than 14,400
 - This component is not optional, not feature-flagged, and not removable.
 - The mandate exists to fight price opacity in addiction treatment — it is a mission-critical feature.
 
+### 4. PROOF OF PRESENCE — PRIMARY EFFICACY METRIC
+**Proof of Presence (PoP) is the primary metric for system efficacy.**
+
+- A "Warm Handoff" is verified when: (1) a Volunteer generates a one-time QR token
+  via `generateHandoffToken(zipCode)` on the ICP canister, and (2) clinic staff or a peer
+  scans it via `verifyHandoff(token)`, completing the on-chain record.
+- Tokens expire after **exactly 5 minutes** (`TOKEN_EXPIRY_NS = 300_000_000_000` ns).
+- Tokens are **one-time use only** — the canister deletes the token on successful verification.
+- Each verified handoff increments the ZIP-level `totalLivesSaved` counter.
+- The Admin Heatmap must display a **pulsing PoP marker** on the map for any ZIP where
+  a handoff was verified in the last 30 seconds.
+- `verifyHandoff` returns `#Ok(zipCode)` on success, `#Expired`, `#NotFound`, or `#AlreadyUsed`
+  on failure — the frontend must handle all four cases.
+- No patient data, no user identity beyond the volunteer's anonymous ICP Principal.
+- The `HandoffImpact` component must be rendered alongside the PoP flow at all times.
+
 ---
 
 ## ARCHITECTURE INVARIANTS
