@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Ensure the Leaflet map container always has an explicit height */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* Override Leaflet popup width for readability */
+.leaflet-popup-content {
+  font-family: system-ui, sans-serif;
+  font-size: 0.875rem;
+  min-width: 160px;
+}
