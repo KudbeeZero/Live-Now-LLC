@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
 import { useEmergencyMode } from './hooks/useEmergencyMode.js';
 import { EmergencyBanner }  from './components/EmergencyBanner.jsx';
+import { PitchGate }        from './components/PitchGate.jsx';
 import Home     from './pages/Home.jsx';
 import Mission  from './pages/Mission.jsx';
 import Founders from './pages/Founders.jsx';
@@ -62,7 +63,7 @@ export default function App() {
             <Route path="/"         element={<Home />} />
             <Route path="/mission"  element={<Mission />} />
             <Route path="/founders" element={<Founders />} />
-            <Route path="/pitch"    element={<Pitch />} />
+            <Route path="/pitch"    element={<PitchGate><Pitch /></PitchGate>} />
           </Routes>
         </main>
 
