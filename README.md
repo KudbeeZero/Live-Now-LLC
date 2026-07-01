@@ -29,13 +29,49 @@ npm run dev     # http://localhost:3000
 npm run build   # production build in dist/
 ```
 
+```bash
+npm run lint    # ESLint (also enforces the no-console NO-PHI guardrail)
+npm run test    # vitest — token lifecycle + 4-hour decay law (11 tests)
+```
+
+CI (GitHub Actions) runs lint, test, and build on every pull request.
+
 ## Architecture
 
 React + Vite + Tailwind, pure client-side. All data access goes through
-`frontend/src/lib/api.js` — currently a local adapter (the full handoff loop works
-in-browser), designed to swap to Supabase (Postgres + edge functions) without
-touching components. See `CLAUDE.md` for the non-negotiable product rules
-(No-PHI, 4-Hour Decay, Transparency Mandate, Proof of Presence).
+`frontend/src/lib/api.js` — the single seam between UI and storage. Components
+never touch storage or a network client directly (lint + tests keep it that way).
+See `CLAUDE.md` for the non-negotiable product rules (No-PHI, 4-Hour Decay,
+Transparency Mandate, Proof of Presence).
 
-> Demo data is illustrative. Partner locations, addresses, and phone numbers are
-> placeholders pending confirmation.
+## What's real vs. what's deferred
+
+**Working today (demo mode):**
+- The full Proof of Presence loop — generate a QR, scan it with a camera, verify.
+  Tokens are 128-bit `crypto.getRandomValues` values, expire at exactly 5 minutes,
+  and are one-time use. All four verify outcomes (`Ok` / `Expired` / `NotFound` /
+  `AlreadyUsed`) are enforced and tested.
+- The 4-hour Decay Law, enforced in the data layer and covered by tests.
+- All four routes (Find Care, Mission, Founders, Pitch) build and render clean.
+- Persistence is **in-browser only** (localStorage) — a real demo, not a mock,
+  but data does not sync between devices yet.
+
+**Explicitly deferred (not started, by design):**
+- **Supabase persistence** — the data layer is written as a drop-in seam for
+  Postgres + edge functions; waiting on project credentials.
+- **Solana attestation** — optional later phase: daily Merkle-root anchoring of
+  handoff counts for public auditability. No wallet, no chain code in this repo.
+- **Founders content** — `/founders` renders with `[EDIT ME]` placeholders
+  awaiting the founders' real bios and photos.
+- **Partner data** — Brightside addresses/phones are illustrative placeholders
+  pending partner confirmation.
+
+## Deploy (≈2 minutes)
+
+The build is a static SPA (`frontend/dist/`), deployable to any static host:
+
+- **Cloudflare Pages:** `npx wrangler pages deploy dist --project-name live-now-recovery`
+  (after `npx wrangler login`), or connect the repo in the dashboard with build
+  command `npm run build` and output `frontend/dist`.
+- **Vercel:** connect the repo, set root directory to `frontend` — `vercel.json`
+  already handles the SPA rewrite.

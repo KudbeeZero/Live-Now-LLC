@@ -27,11 +27,12 @@ export function VolunteerHandoff() {
 
   // Countdown timer — clears token when it hits zero
   useEffect(() => {
-    if (secondsLeft <= 0) {
-      if (token) setToken(null);
-      return;
-    }
-    const id = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
+    if (!token || secondsLeft <= 0) return;
+    const id = setTimeout(() => {
+      const next = secondsLeft - 1;
+      setSecondsLeft(next);
+      if (next <= 0) setToken(null);
+    }, 1000);
     return () => clearTimeout(id);
   }, [secondsLeft, token]);
 

@@ -4,19 +4,21 @@ import { DopplerMap }          from '../components/DopplerMap.jsx';
 import { VolunteerHandoff }    from '../components/VolunteerHandoff.jsx';
 import { ScanHandoff }         from '../components/ScanHandoff.jsx';
 import { HandoffImpact }       from '../components/HandoffImpact.jsx';
-import { BrightsideAnchor, BRIGHTSIDE_LOCATIONS } from '../components/providers/BrightsideAnchor.jsx';
-import { getAllProviders, getHandoffCountsByZip } from '../lib/api.js';
+import { BrightsideAnchor } from '../components/providers/BrightsideAnchor.jsx';
+import { getAllProviders, getHandoffCountsByZip, getBrightsideLocations } from '../lib/api.js';
 
 // How long (ms) a ZIP stays in "pulsing" state after a fresh handoff
 const PULSE_DURATION_MS = 30_000;
 
 export default function Home() {
   const [providers, setProviders] = useState([]);
+  const [brightside, setBrightside] = useState([]);
   const [zipCounts, setZipCounts] = useState([]);
   const [pulsingZips, setPulsingZips] = useState(new Set());
 
   useEffect(() => {
     getAllProviders().then(setProviders);
+    getBrightsideLocations().then(setBrightside);
     getHandoffCountsByZip().then(setZipCounts);
   }, []);
 
@@ -70,7 +72,7 @@ export default function Home() {
         </h2>
         <DopplerMap
           providers={providers}
-          anchorProviders={BRIGHTSIDE_LOCATIONS}
+          anchorProviders={brightside}
           pulsingZips={pulsingZips}
         />
       </section>
@@ -98,7 +100,7 @@ export default function Home() {
 
       {/* Brightside Recovery — Verified Anchor Provider matrix */}
       <div className="mb-8">
-        <BrightsideAnchor />
+        <BrightsideAnchor locations={brightside} />
       </div>
 
       {/* Providers list + Price Comparison side-by-side on larger screens */}
