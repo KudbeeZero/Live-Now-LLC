@@ -4,14 +4,12 @@ import {
   ExternalLink, Navigation, QrCode,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { generateHandoffToken, isFresh } from '../../lib/api.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
-
-// Brightside Recovery brand colors
-const BS_BLUE  = '#003087';
-const BS_DARK  = '#002060';
+// Brightside Recovery brand color
+const BS_BLUE = '#003087';
 
 // Mark Cuban Cost Plus Drugs pharmacy details
 const MCCPD = {
@@ -24,215 +22,8 @@ const MCCPD = {
   url:      'https://costplusdrugs.com',
 };
 
-// Timestamps for mock "lastVerified" — computed once at module load.
-// In production these come from the ICP canister's lastVerified field (nanoseconds).
-// PRIVACY: no PHI here — these are clinic-level timestamps only.
-const _NOW   = Date.now();
-const _FRESH = _NOW - 2 * 60 * 60 * 1000;   // 2 h ago  → badge green
-const _STALE = _NOW - 5 * 60 * 60 * 1000;   // 5 h ago  → badge yellow (decay triggered)
-
-// ── Location Matrix ───────────────────────────────────────────────────────────
-
-/**
- * BRIGHTSIDE_LOCATIONS — 17 Northeast Ohio centers.
- * All coordinates are within NE Ohio map bounds (SW [40.394, -82.758] → NE [42.327, -80.519]).
- * No PHI is stored — only clinic-level data (name, address, phone, services).
- */
-export const BRIGHTSIDE_LOCATIONS = [
-  {
-    id: 'bs-001',
-    name: 'Brightside Recovery – Cleveland West',
-    address: '4401 Detroit Ave, Cleveland, OH 44113',
-    phone: '(216) 400-6800',
-    lat: 41.4762, lng: -81.7230,
-    services: ['MAT', 'IOP', 'Detox'],
-    acceptsMedicaid: true,
-    zipCode: '44113',
-    lastVerified: _FRESH,
-  },
-  {
-    id: 'bs-002',
-    name: 'Brightside Recovery – Lakewood',
-    address: '14800 Detroit Ave, Lakewood, OH 44107',
-    phone: '(216) 400-6801',
-    lat: 41.4820, lng: -81.7982,
-    services: ['MAT', 'IOP'],
-    acceptsMedicaid: true,
-    zipCode: '44107',
-    lastVerified: _FRESH,
-  },
-  {
-    id: 'bs-003',
-    name: 'Brightside Recovery – Parma',
-    address: '5500 Pearl Rd, Parma, OH 44129',
-    phone: '(440) 400-6802',
-    lat: 41.3845, lng: -81.7229,
-    services: ['MAT', 'IOP'],
-    acceptsMedicaid: true,
-    zipCode: '44129',
-    lastVerified: _STALE,   // demo: stale → yellow badge
-  },
-  {
-    id: 'bs-004',
-    name: 'Brightside Recovery – Strongsville',
-    address: '18605 Royalton Rd, Strongsville, OH 44136',
-    phone: '(440) 400-6803',
-    lat: 41.3145, lng: -81.8357,
-    services: ['MAT', 'IOP', 'Detox'],
-    acceptsMedicaid: true,
-    zipCode: '44136',
-    lastVerified: _FRESH,
-  },
-  {
-    id: 'bs-005',
-    name: 'Brightside Recovery – Broadview Heights',
-    address: '1000 E Royalton Rd, Broadview Heights, OH 44147',
-    phone: '(440) 400-6804',
-    lat: 41.3200, lng: -81.6790,
-    services: ['MAT', 'IOP'],
-    acceptsMedicaid: true,
-    zipCode: '44147',
-    lastVerified: _FRESH,
-  },
-  {
-    id: 'bs-006',
-    name: 'Brightside Recovery – Akron Main',
-    address: '285 E Market St, Akron, OH 44308',
-    phone: '(330) 400-6805',
-    lat: 41.0814, lng: -81.5190,
-    services: ['MAT', 'IOP', 'Detox'],
-    acceptsMedicaid: true,
-    zipCode: '44308',
-    lastVerified: _FRESH,
-  },
-  {
-    id: 'bs-007',
-    name: 'Brightside Recovery – Akron North Hill',
-    address: '1400 N Main St, Akron, OH 44310',
-    phone: '(330) 400-6806',
-    lat: 41.1034, lng: -81.5100,
-    services: ['MAT', 'IOP'],
-    acceptsMedicaid: true,
-    zipCode: '44310',
-    lastVerified: _STALE,   // demo: stale → yellow badge
-  },
-  {
-    id: 'bs-008',
-    name: 'Brightside Recovery – Cuyahoga Falls',
-    address: '2310 State Rd, Cuyahoga Falls, OH 44223',
-    phone: '(330) 400-6807',
-    lat: 41.1334, lng: -81.4845,
-    services: ['MAT', 'IOP'],
-    acceptsMedicaid: true,
-    zipCode: '44223',
-    lastVerified: _FRESH,
-  },
-  {
-    id: 'bs-009',
-    name: 'Brightside Recovery – Kent',
-    address: '615 E Erie St, Kent, OH 44240',
-    phone: '(330) 400-6808',
-    lat: 41.1531, lng: -81.3579,
-    services: ['MAT', 'IOP'],
-    acceptsMedicaid: true,
-    zipCode: '44240',
-    lastVerified: _FRESH,
-  },
-  {
-    id: 'bs-010',
-    name: 'Brightside Recovery – Lorain',
-    address: '3700 Kolbe Rd, Lorain, OH 44053',
-    phone: '(440) 400-6809',
-    lat: 41.4529, lng: -82.1824,
-    services: ['MAT', 'IOP', 'Detox'],
-    acceptsMedicaid: true,
-    zipCode: '44053',
-    lastVerified: _FRESH,
-  },
-  {
-    id: 'bs-011',
-    name: 'Brightside Recovery – Elyria',
-    address: '347 Midway Blvd, Elyria, OH 44035',
-    phone: '(440) 400-6810',
-    lat: 41.3684, lng: -82.1074,
-    services: ['MAT', 'IOP'],
-    acceptsMedicaid: true,
-    zipCode: '44035',
-    lastVerified: _STALE,   // demo: stale → yellow badge
-  },
-  {
-    id: 'bs-012',
-    name: 'Brightside Recovery – Mentor',
-    address: '9785 Johnnycake Ridge Rd, Mentor, OH 44060',
-    phone: '(440) 400-6811',
-    lat: 41.6731, lng: -81.3498,
-    services: ['MAT', 'IOP'],
-    acceptsMedicaid: true,
-    zipCode: '44060',
-    lastVerified: _FRESH,
-  },
-  {
-    id: 'bs-013',
-    name: 'Brightside Recovery – Willoughby',
-    address: '4150 Erie St, Willoughby, OH 44094',
-    phone: '(440) 400-6812',
-    lat: 41.6403, lng: -81.4118,
-    services: ['MAT', 'IOP'],
-    acceptsMedicaid: true,
-    zipCode: '44094',
-    lastVerified: _FRESH,
-  },
-  {
-    id: 'bs-014',
-    name: 'Brightside Recovery – Eastlake',
-    address: '34950 Lake Shore Blvd, Eastlake, OH 44095',
-    phone: '(440) 400-6813',
-    lat: 41.6550, lng: -81.4499,
-    services: ['MAT', 'IOP'],
-    acceptsMedicaid: true,
-    zipCode: '44095',
-    lastVerified: _FRESH,
-  },
-  {
-    id: 'bs-015',
-    name: 'Brightside Recovery – Medina',
-    address: '3720 Medina Rd, Medina, OH 44256',
-    phone: '(330) 400-6814',
-    lat: 41.1381, lng: -81.8637,
-    services: ['MAT', 'IOP'],
-    acceptsMedicaid: true,
-    zipCode: '44256',
-    lastVerified: _FRESH,
-  },
-  {
-    id: 'bs-016',
-    name: 'Brightside Recovery – Canton',
-    address: '4715 Dressler Rd NW, Canton, OH 44718',
-    phone: '(330) 400-6815',
-    lat: 40.8450, lng: -81.4400,
-    services: ['MAT', 'IOP', 'Detox'],
-    acceptsMedicaid: true,
-    zipCode: '44718',
-    lastVerified: _FRESH,
-  },
-  {
-    id: 'bs-017',
-    name: 'Brightside Recovery – Massillon',
-    address: '2420 17th St NE, Massillon, OH 44646',
-    phone: '(330) 400-6816',
-    lat: 40.7967, lng: -81.5213,
-    services: ['MAT', 'IOP'],
-    acceptsMedicaid: true,
-    zipCode: '44646',
-    lastVerified: _FRESH,
-  },
-];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function isVerified(lastVerified) {
-  return Date.now() - lastVerified < FOUR_HOURS_MS;
-}
 
 function googleMapsUrl(address) {
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
@@ -241,7 +32,7 @@ function googleMapsUrl(address) {
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function VerificationBadge({ lastVerified }) {
-  const fresh = isVerified(lastVerified);
+  const fresh = isFresh(lastVerified);
   return fresh ? (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-brightside-lt text-brightside border border-blue-300">
       <ShieldCheck size={12} aria-hidden="true" />
@@ -251,20 +42,6 @@ function VerificationBadge({ lastVerified }) {
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 border border-yellow-400">
       <AlertTriangle size={12} aria-hidden="true" />
       Verify Pending (&gt;4h)
-    </span>
-  );
-}
-
-const SERVICE_COLORS = {
-  MAT:   'bg-emerald-100 text-emerald-800',
-  IOP:   'bg-purple-100  text-purple-800',
-  Detox: 'bg-orange-100  text-orange-800',
-};
-
-function ServicePill({ service }) {
-  return (
-    <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${SERVICE_COLORS[service] ?? 'bg-gray-100 text-gray-700'}`}>
-      {service}
     </span>
   );
 }
@@ -286,9 +63,9 @@ function HandoffQR({ zipCode, locationName }) {
     return () => clearInterval(id);
   }, [token]);
 
-  const generate = () => {
-    const nonce = Math.floor(Math.random() * 999_999);
-    setToken(`${nonce}-${Date.now()}`);
+  const generate = async () => {
+    const t = await generateHandoffToken(zipCode);
+    setToken(t);
     setTimeLeft(300);
   };
 
@@ -421,7 +198,7 @@ function ScriptModal({ location, onClose }) {
 
 function LocationCard({ location, onRequestScript }) {
   const [showHandoff, setShowHandoff] = useState(false);
-  const fresh = isVerified(location.lastVerified);
+  const fresh = isFresh(location.lastVerified);
 
   return (
     <div
@@ -538,21 +315,21 @@ function LocationCard({ location, onRequestScript }) {
  *
  * No PHI is stored or rendered at any point (CLAUDE.md §1).
  */
-export function BrightsideAnchor() {
+export function BrightsideAnchor({ locations = [] }) {
   const [scriptLocation, setScriptLocation] = useState(null);
   const [filter, setFilter] = useState('all');
 
   const filtered =
     filter === 'all'
-      ? BRIGHTSIDE_LOCATIONS
-      : BRIGHTSIDE_LOCATIONS.filter((loc) =>
+      ? locations
+      : locations.filter((loc) =>
           loc.services.includes(filter.toUpperCase())
         );
 
-  const freshCount = BRIGHTSIDE_LOCATIONS.filter((loc) => isVerified(loc.lastVerified)).length;
+  const freshCount = locations.filter((loc) => isFresh(loc.lastVerified)).length;
 
   const FILTERS = [
-    { key: 'all',   label: `All ${BRIGHTSIDE_LOCATIONS.length}` },
+    { key: 'all',   label: `All ${locations.length}` },
     { key: 'mat',   label: 'MAT' },
     { key: 'iop',   label: 'IOP' },
     { key: 'detox', label: 'Detox' },
@@ -575,12 +352,12 @@ export function BrightsideAnchor() {
               </h2>
             </div>
             <p className="text-blue-200 text-sm mt-1">
-              Verified Anchor Provider · {BRIGHTSIDE_LOCATIONS.length} Northeast Ohio Locations
+              Verified Anchor Provider · {locations.length} Northeast Ohio Locations
             </p>
           </div>
           <div className="flex flex-col items-end gap-1 text-right">
             <span className="bg-white bg-opacity-20 text-white text-sm font-bold px-3 py-1 rounded-full">
-              {freshCount}/{BRIGHTSIDE_LOCATIONS.length} Verified Live
+              {freshCount}/{locations.length} Verified Live
             </span>
             <span className="text-blue-200 text-xs">Full-Continuum: MAT · IOP · Detox</span>
           </div>
