@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import { generateHandoffToken } from '../lib/api.js';
 
-const TOKEN_TTL_SECONDS = 300; // 5 minutes — must match TOKEN_EXPIRY_NS in main.mo
+const TOKEN_TTL_SECONDS = 300; // 5 minutes — must match TOKEN_TTL_MS in lib/api.js
 
-// NE Ohio ZIP codes accepted for handoffs (validates input before canister call)
+// NE Ohio ZIP codes accepted for handoffs (validated before token generation)
 const NE_OHIO_ZIP_REGEX = /^(440|441|442|443|444|445|446|447|448)\d{2}$/;
 
 /**
  * VolunteerHandoff
  *
  * Allows a volunteer to generate a one-time QR code for a Warm Handoff.
- * The QR code encodes the opaque token returned by the ICP canister's
+ * The QR code encodes the opaque token returned by the data layer's
  * generateHandoffToken() function.
  *
  * Privacy: ZIP code is the only geographic data collected. No patient data.
@@ -39,13 +40,7 @@ export function VolunteerHandoff() {
     setError(null);
     setLoading(true);
     try {
-      // TODO: replace mock with live canister call once dfx is deployed:
-      // const t = await liveNowBackend.generateHandoffToken(zipCode);
-      //
-      // Mock token simulates the canister's nonce-timestamp format.
-      // In production this is generated server-side in the ICP canister.
-      const mockNonce = Math.floor(Math.random() * 900000) + 100000;
-      const t = `${mockNonce}-${Date.now()}`;
+      const t = await generateHandoffToken(zipCode);
       setToken(t);
       setSecondsLeft(TOKEN_TTL_SECONDS);
     } catch (err) {

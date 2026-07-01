@@ -4,6 +4,7 @@ import {
   ExternalLink, Navigation, QrCode,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { generateHandoffToken } from '../../lib/api.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -25,7 +26,7 @@ const MCCPD = {
 };
 
 // Timestamps for mock "lastVerified" — computed once at module load.
-// In production these come from the ICP canister's lastVerified field (nanoseconds).
+// In production these come from the providers table's last_verified column.
 // PRIVACY: no PHI here — these are clinic-level timestamps only.
 const _NOW   = Date.now();
 const _FRESH = _NOW - 2 * 60 * 60 * 1000;   // 2 h ago  → badge green
@@ -286,9 +287,9 @@ function HandoffQR({ zipCode, locationName }) {
     return () => clearInterval(id);
   }, [token]);
 
-  const generate = () => {
-    const nonce = Math.floor(Math.random() * 999_999);
-    setToken(`${nonce}-${Date.now()}`);
+  const generate = async () => {
+    const t = await generateHandoffToken(zipCode);
+    setToken(t);
     setTimeLeft(300);
   };
 

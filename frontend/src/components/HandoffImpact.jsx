@@ -4,7 +4,7 @@ import React from 'react';
  * HandoffImpact
  *
  * Displays the running total of verified Warm Handoffs, broken down by ZIP code.
- * Data comes from the ICP canister's getTotalHandoffs() and getHandoffCountsByZip().
+ * Data comes from the data layer's getHandoffCountsByZip() (src/lib/api.js).
  *
  * Props:
  *   total        — number: total verified handoffs across all ZIPs
@@ -22,7 +22,7 @@ export function HandoffImpact({ total = 0, zipCounts = [], pulsingZips = new Set
         <div>
           <h3 className="text-navy font-bold text-lg">Verified Impact</h3>
           <p className="text-gray-500 text-sm mt-0.5">
-            Warm Handoffs recorded on-chain
+            Verified Warm Handoffs
           </p>
         </div>
         {/* Total counter */}
@@ -77,7 +77,7 @@ export function HandoffImpact({ total = 0, zipCounts = [], pulsingZips = new Set
       )}
 
       <p className="text-xs text-gray-400 text-center border-t border-gray-100 pt-3">
-        Data recorded anonymously on the Internet Computer Protocol.
+        Data recorded anonymously — no patient information, ever.
         No patient information is ever stored.
       </p>
     </div>

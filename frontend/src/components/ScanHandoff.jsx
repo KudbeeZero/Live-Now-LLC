@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
+import { verifyHandoff } from '../lib/api.js';
+
+// Four-case contract per CLAUDE.md §4 — every failure gets a distinct message
+const VERIFY_ERRORS = {
+  Expired:     'This code has expired (codes last 5 minutes). Ask the volunteer to generate a new one.',
+  NotFound:    'Code not recognized. Please scan a valid Handoff code.',
+  AlreadyUsed: 'This code was already used — each Handoff code works exactly once.',
+};
 
 /**
  * ScanHandoff
@@ -7,7 +15,7 @@ import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
  * Allows clinic staff or a peer volunteer to scan the QR code displayed on
  * the volunteer's device, completing the Warm Handoff.
  *
- * Calls verifyHandoff(token) on the ICP canister. On success, displays a
+ * Calls verifyHandoff(token) in the data layer. On success, displays a
  * teal checkmark and the "Handoff Verified. Impact Recorded." confirmation.
  *
  * Privacy: only the opaque token string is ever transmitted — no PHI.
@@ -58,28 +66,21 @@ export function ScanHandoff({ onVerified }) {
 
       scanner.render(
         async (decodedText) => {
-          // QR scan success — verify with canister
+          // QR scan success — verify token
           await stopScanner();
           if (!mountedRef.current) return;
 
           try {
-            // TODO: replace mock with live canister call once dfx is deployed:
-            // const result = await liveNowBackend.verifyHandoff(decodedText);
-            //
-            // Mock verification: accept any token matching the nonce-timestamp pattern
-            // and simulate extracting a ZIP from a demo token.
-            const isMockToken = /^\d+-\d+$/.test(decodedText);
-            if (!isMockToken) {
-              setErrorMsg('Invalid QR code. Please scan a valid Handoff code.');
+            const result = await verifyHandoff(decodedText);
+            if (result.status !== 'Ok') {
+              setErrorMsg(VERIFY_ERRORS[result.status] ?? 'Verification failed. Please try again.');
               setPhase('error');
               return;
             }
 
-            // Mock success — in production the canister returns #Ok(zipCode)
-            const mockZip = '44101';
-            setVerifiedZip(mockZip);
+            setVerifiedZip(result.zipCode);
             setPhase('success');
-            if (onVerified) onVerified(mockZip);
+            if (onVerified) onVerified(result.zipCode);
           } catch (err) {
             setErrorMsg('Verification failed. Please try again.');
             setPhase('error');
@@ -178,7 +179,7 @@ export function ScanHandoff({ onVerified }) {
             </p>
             {verifiedZip && (
               <p className="text-sm text-gray-500 mt-2">
-                ZIP <span className="font-semibold text-navy">{verifiedZip}</span> — recorded on-chain
+                ZIP <span className="font-semibold text-navy">{verifiedZip}</span> — impact recorded anonymously
               </p>
             )}
           </div>

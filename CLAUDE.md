@@ -13,7 +13,7 @@
 
 - No patient names, dates of birth, medical history, diagnoses, prescriptions, or
   any data that could identify an individual seeking treatment.
-- All user interactions are **anonymous via Internet Identity (ICP)**.
+- All user interactions are **anonymous — no accounts, no identity collection**.
 - Providers are identified by an internal opaque `id: Text` — never by patient-linked data.
 - Any feature request that would store PHI must be **rejected at the architecture level**.
 - Audit logs must contain only provider-side timestamps and status flags — never patient data.
@@ -22,7 +22,8 @@
 Any provider `isLive` status with a `lastVerified` timestamp **older than 14,400 seconds
 (4 hours)** must be programmatically treated as `#Unknown` — never as `true`.
 
-- `getEmergencyActive()` enforces this server-side in Motoko.
+- `resolveStatus()` enforces this in the data layer (`frontend/src/lib/api.js`);
+  once Supabase lands, it moves server-side into a SQL view.
 - The frontend map must visually distinguish `#Unknown` (grey) from confirmed Live (green).
 - No UI component may display a green "Live" pin without a server-confirmed fresh timestamp.
 - Cron-style heartbeat jobs (if added) must re-verify every ≤ 3 hours to stay within margin.
@@ -39,16 +40,16 @@ Any provider `isLive` status with a `lastVerified` timestamp **older than 14,400
 **Proof of Presence (PoP) is the primary metric for system efficacy.**
 
 - A "Warm Handoff" is verified when: (1) a Volunteer generates a one-time QR token
-  via `generateHandoffToken(zipCode)` on the ICP canister, and (2) clinic staff or a peer
-  scans it via `verifyHandoff(token)`, completing the on-chain record.
-- Tokens expire after **exactly 5 minutes** (`TOKEN_EXPIRY_NS = 300_000_000_000` ns).
-- Tokens are **one-time use only** — the canister deletes the token on successful verification.
+  via `generateHandoffToken(zipCode)` in the data layer, and (2) clinic staff or a peer
+  scans it via `verifyHandoff(token)`, completing the verified record.
+- Tokens expire after **exactly 5 minutes** (`TOKEN_TTL_MS` in `frontend/src/lib/api.js`).
+- Tokens are **one-time use only** — marked used on successful verification.
 - Each verified handoff increments the ZIP-level `totalLivesSaved` counter.
 - The Admin Heatmap must display a **pulsing PoP marker** on the map for any ZIP where
   a handoff was verified in the last 30 seconds.
-- `verifyHandoff` returns `#Ok(zipCode)` on success, `#Expired`, `#NotFound`, or `#AlreadyUsed`
-  on failure — the frontend must handle all four cases.
-- No patient data, no user identity beyond the volunteer's anonymous ICP Principal.
+- `verifyHandoff` returns `{ status: 'Ok', zipCode }` on success, or status `'Expired'`,
+  `'NotFound'`, or `'AlreadyUsed'` on failure — the frontend must handle all four cases.
+- No patient data, no user identity — tokens are cryptographically random and opaque.
 - The `HandoffImpact` component must be rendered alongside the PoP flow at all times.
 
 ---
@@ -84,12 +85,18 @@ They offer Full-Continuum care (Detox, IOP, MAT) across 17 Northeast Ohio locati
 
 ## ARCHITECTURE INVARIANTS
 
-| Layer     | Technology              | Notes                                  |
-|-----------|-------------------------|----------------------------------------|
-| Backend   | Motoko / ICP canister   | dfx-compatible, stable variables only  |
-| Frontend  | React + Vite + Tailwind | No SSR; pure client-side               |
-| Identity  | Internet Identity       | Anonymous — no wallet key logging      |
-| Map       | react-leaflet           | Bounds locked to Northeast Ohio        |
+| Layer     | Technology                    | Notes                                            |
+|-----------|-------------------------------|--------------------------------------------------|
+| Data      | `frontend/src/lib/api.js`     | Single seam — local adapter now, Supabase next   |
+| Backend   | Supabase (Postgres + edge fn) | Planned — decay via SQL view, tokens via edge fn |
+| Frontend  | React + Vite + Tailwind       | No SSR; client-side routing via react-router     |
+| Identity  | None                          | Anonymous by architecture — no accounts          |
+| Map       | react-leaflet                 | Bounds locked to Northeast Ohio                  |
+| Ledger    | Solana (optional, phase 4)    | Daily Merkle-root anchoring of handoff counts    |
+
+**ICP/Motoko is retired.** Do not reintroduce dfx, canisters, or Internet Identity.
+All backend calls go through `frontend/src/lib/api.js` — components never talk to
+storage or a network client directly.
 
 ### Map Bounds — Northeast Ohio Lock
 The Leaflet map MUST be constrained to the following bounds at all times:
